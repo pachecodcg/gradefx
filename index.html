@@ -374,6 +374,21 @@ body.mode-student .view-chip { display:block; position:absolute; left:12px; bott
 .sp-slot.ok .d { color:var(--text); }
 .sp-link { font-size:11.5px; color:var(--text-mut); text-decoration:underline; cursor:pointer; }
 .sp-link:hover { color:var(--text); }
+.sp-ex-row { text-align:center; margin-top:7px; }
+.sp-ex-btn { background:none; border:0; padding:2px 4px; font-family:var(--font-body); font-size:11.5px; color:var(--text-mut); text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+.sp-ex-btn:hover { color:var(--text); }
+.sp-ex { margin-top:8px; border:1px solid var(--border-strong); border-radius:9px; padding:10px 10px 6px; background:var(--panel); }
+.sp-ex-h { display:flex; align-items:baseline; justify-content:space-between; font-family:var(--font-head); font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--text); }
+.sp-ex-x { background:none; border:0; padding:0; font-family:var(--font-body); letter-spacing:0; text-transform:none; }
+.sp-ex-d { font-size:11.5px; line-height:1.45; color:var(--text-mut); margin:3px 0 4px; }
+.sp-ex-g { font-family:var(--font-head); font-size:10.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--text-mut); margin:8px 0 2px; padding-top:8px; border-top:1px solid var(--border); }
+.sp-ex-h + .sp-ex-i { margin-top:4px; }
+.sp-ex-i { display:block; width:100%; text-align:left; background:none; border:0; border-radius:6px; padding:6px 8px; margin:0 -8px; width:calc(100% + 16px); font-family:var(--font-body); font-size:12.5px; color:var(--text); cursor:pointer; }
+.sp-ex-i:hover { background:var(--panel-2); }
+.sp-ex-i.on { font-weight:700; }
+.sp-ex-i:focus-visible, .sp-ex-btn:focus-visible { outline:2px solid var(--silver); outline-offset:1px; }
+.fb-fac { margin-top:8px; }
+.fb-fac .fb-grade-num { font-size:28px; }
 .sp-hint { font-size:11px; line-height:1.45; color:var(--text-dim); margin-top:7px; text-align:center; }
 .sp-work { margin-top:9px; padding:8px 10px; border-radius:7px; border:1px solid var(--border-strong); font-size:12px; line-height:1.45; color:var(--text); }
 .sp-work.warn, .sp-issues { background-image:repeating-linear-gradient(45deg, rgba(165,172,175,0.13) 0 2px, transparent 2px 8px); border:1.5px solid var(--silver); }
@@ -1131,7 +1146,7 @@ body.mode-student .cut-btn.mx.b-standard { border-color:var(--brand); }
 // spatial grid, signed point-to-SURFACE distance, and trimmed ICP.
 // Everything here works on plain typed arrays so it can be unit-tested.
 // ============================================================
-const GFX = { VERSION: '1.46.0' };
+const GFX = { VERSION: '1.47.0' };
 
 // ---------- STL ----------
 GFX.parseSTL = function (buffer) {
@@ -7998,10 +8013,53 @@ Sheet._polySeq = 0;
 // A student may swap in their own unprepared scan; the preparation is always
 // compared with whichever unprepared tooth is loaded.
 // ============================================================
+// ---- v1.47: example preparations, loaded from the same folder as this page ----
+// Students see only the label. File names, envelope and dentoform numbers never reach the screen.
+// grade: the faculty grade for the whole prep; fac: the faculty mark on the criterion; row: the rubric row it is about.
+const EXAMPLES = {
+  g30: [
+    { group: '', label: 'Yellow Preparation', file: 'YELLOWPREP.stl' },
+    { group: 'Occlusal clearance', label: 'Too little', file: 'PACHECOPREP.stl', row: 1 }
+  ],
+  z3: [
+    { group: 'Overall', label: 'Meets most criteria', file: 'envelope 82.stl', grade: 91.5 },
+    { group: 'Overall', label: 'Misses several criteria', file: 'envelope 76.stl', grade: 72.5 },
+    { group: 'Occlusal clearance', label: 'Too little', file: 'envelope 30.stl', grade: 75.5, fac: 'Major, 7 points', row: 1 },
+    { group: 'Occlusal clearance', label: 'Too much', file: 'envelope 6.stl', grade: null, fac: 'Major, 8 points', row: 1 },
+    { group: 'Buccal-lingual taper', label: 'Too parallel', file: 'envelope 75.stl', grade: 76.5, fac: 'Critical, 10 points', row: 7 },
+    { group: 'Buccal-lingual taper', label: 'Too convergent', file: 'envelope 20.stl', grade: 79, fac: 'Critical, 10 points', row: 7 },
+    { group: 'Mesial-distal taper', label: 'Too parallel', file: 'envelope 75.stl', grade: 76.5, fac: 'Minor, marked “tight”', row: 12 },
+    { group: 'Mesial-distal taper', label: 'Too convergent', file: 'envelope 70.stl', grade: null, fac: 'Moderate, 4.5 points', row: 12 },
+    { group: 'Margin', label: 'Too narrow', file: 'envelope 29.stl', grade: 86.5, fac: 'Minor', row: 16 },
+    { group: 'Margin', label: 'Too wide', file: 'envelope 76.stl', grade: 72.5, fac: 'Moderate, 6 points', row: 16 }
+  ]
+};
+const exName = ex => ex.group ? ex.group + ': ' + ex.label.charAt(0).toLowerCase() + ex.label.slice(1) : ex.label;
 const Stu = {
   tpl: null, before: null, after: null,
   opp: null, oppStd: null, oppOwn: null, oppNote: '', oppMesh: null, oppState: '',   // the opposing arch: the one in use, the standard one, the student's own (as exported)
-  working: '', note: null, fatal: '',
+  working: '', note: null, fatal: '', exOpen: false,
+
+  examples() { return EXAMPLES[RUB.caseId] || []; },
+  async loadExample(i) {
+    const ex = this.examples()[i];
+    if (!ex) return;
+    this.exOpen = false;
+    if (!this.tpl) { this.note = { msg: 'The unprepared tooth is still loading. Try again in a moment.', warn: true }; Feedback.render(); return; }
+    this.note = null; this.working = 'Downloading the example...';
+    setStatus(this.working); Feedback.render();
+    let buf = null;
+    try {
+      const r = await sampleFetch(encodeURIComponent(ex.file));
+      if (r && r.ok) buf = await r.arrayBuffer();
+    } catch (e) { buf = null; }
+    this.working = '';
+    if (!buf) {
+      this.note = { msg: 'This example is not available right now. Check the internet connection and try again.', warn: true };
+      setStatus(this.note.msg, 'warn'); Feedback.render(); return;
+    }
+    await this.addFiles([{ name: 'example.stl', buf }], 'after', ex);
+  },
 
   async boot() {
     this.fatal = '';
@@ -8169,7 +8227,7 @@ const Stu = {
   },
 
   // slot: 'before' or 'after' (the button that was pressed), or null for dropped files (decided by what the scan shows).
-  async addFiles(files, slot) {
+  async addFiles(files, slot, ex) {
     const list = Array.from(files || []).filter(f => /\.stl$/i.test(f.name)).slice(0, slot ? 1 : 2);
     if (!list.length) { this.note = { msg: 'That is not an STL file. Export your scan as STL and try again.', warn: true }; setStatus(this.note.msg, 'warn'); Feedback.render(); return; }
     if (!this.tpl) { this.note = this.fatal ? null : { msg: 'The unprepared tooth is still loading. Try again in a moment.', warn: true }; Feedback.render(); return; }
@@ -8180,18 +8238,19 @@ const Stu = {
     let changed = false;
     for (const f of list) {
       try {
-        const data = GFX.parseSTL(await readFile(f)), warn = modelSizeWarning(data.positions);
+        const data = GFX.parseSTL(f.buf || await readFile(f)), warn = modelSizeWarning(data.positions);
         if (warn) { this.note = { msg: warn, warn: true }; continue; }
         await nextPaint();
         const pl = this.place(data);
+        if (pl.kind === 'bad' && ex) { this.note = { msg: 'This example could not be placed on the unprepared tooth.', warn: true }; continue; }
         if (pl.kind === 'bad') { this.note = { msg: '"' + f.name + '" does not look like a scan of this quadrant. Scan the quadrant with tooth ' + RUB.tooth + ' and its neighbors, then try again.', warn: true }; continue; }
         const to = slot || (pl.kind === 'before' ? 'before' : 'after');
         if (to === 'before') {
           if (pl.kind === 'after') { this.note = { msg: '"' + f.name + '" looks like a prepared tooth, so it was not loaded as the unprepared tooth. Use the "Your preparation" button for it.', warn: true }; continue; }
           this.before = { name: f.name, geo: pl.geo };
         } else {
-          this.after = { name: f.name, geo: pl.geo, file: f, xf: pl.xf };   // the file itself is kept so the student can send it, unchanged
-          if (pl.kind === 'before') this.note = { msg: '"' + f.name + '" looks unprepared. Check that you chose the scan of your preparation.', warn: true };
+          this.after = ex ? { name: exName(ex), geo: pl.geo, xf: pl.xf, ex } : { name: f.name, geo: pl.geo, file: f, xf: pl.xf };   // the file itself is kept so the student can send it, unchanged
+          if (pl.kind === 'before' && !ex) this.note = { msg: '"' + f.name + '" looks unprepared. Check that you chose the scan of your preparation.', warn: true };
         }
         changed = true;
       } catch (e) { this.note = { msg: 'Could not read "' + f.name + '": ' + e.message, warn: true }; }
@@ -8714,9 +8773,10 @@ const Feedback = {
     const T = !!Stu.tpl;
     let h = ''
       + '<div class="sp-box">' + this.stdSlot()
-      + '<div class="sp-slot' + (A ? ' ok' : '') + '"><b>2</b><div class="g"><div class="t">Your preparation</div><div class="d">' + (A ? A.name : 'not loaded yet') + '</div></div>'
-      + (A ? '<button type="button" class="fb-btn" data-act="pick-after">Change</button>' : '') + '</div>'
+      + '<div class="sp-slot' + (A ? ' ok' : '') + '"><b>2</b><div class="g"><div class="t">' + (A && A.ex ? 'Example' : 'Your preparation') + '</div><div class="d">' + (A ? A.name : 'not loaded yet') + '</div></div>'
+      + (A ? '<button type="button" class="fb-btn" data-act="pick-after">' + (A.ex ? 'Load yours' : 'Change') + '</button>' : '') + '</div>'
       + (A ? '' : '<button type="button" class="btn btn-primary" data-act="pick-after">Load your preparation</button>')
+      + this.exPicker()
       + (Stu.oppNote ? '<div class="sp-work warn">' + Stu.oppNote + '</div>' : '')
       + (A && A.file ? Shell.sendRow(A) : '')
       + '<div class="sp-hint">STL files stay on this computer unless you choose to send your scan.</div>';
@@ -8783,8 +8843,33 @@ const Feedback = {
     panel.scrollTop = keep;
   },
 
+  exPicker() {
+    const list = Stu.examples();
+    if (!list.length || !Stu.tpl) return '';
+    if (!Stu.exOpen) return '<div class="sp-ex-row"><button type="button" class="sp-ex-btn" data-act="exopen" aria-expanded="false">Try an example</button></div>';
+    let h = '<div class="sp-ex" role="group" aria-label="Example preparations"><div class="sp-ex-h"><span>Examples</span><button type="button" class="sp-link sp-ex-x" data-act="exopen" aria-expanded="true">Close</button></div>';
+    let g = null;
+    list.forEach((ex, i) => {
+      if (ex.group !== g) { g = ex.group; if (g) h += '<div class="sp-ex-g">' + g + '</div>'; }
+      const on = Stu.after && Stu.after.ex === ex;
+      h += '<button type="button" class="sp-ex-i' + (on ? ' on' : '') + '" data-act="example" data-arg="' + i + '"' + (on ? ' aria-current="true"' : '') + '>' + (on ? this.CK : '') + ex.label + '</button>';
+    });
+    return h + '</div>';
+  },
+  exFaculty(ex) {
+    if (ex.grade == null && !ex.fac) return '';
+    const row = ex.row && RUB.SECTIONS.reduce((f, sec) => f || sec.items.find(it => it.n === ex.row), null);
+    return '<div class="fb-grade fb-fac"><div class="fb-grade-num">' + (ex.grade != null ? this.num(ex.grade) : '<span>no grade</span>') + '</div>'
+      + '<div class="fb-grade-sub"><b class="est">Faculty grade</b>'
+      + (ex.fac ? '<br>' + ex.group + ': ' + ex.fac : '')
+      + (row ? '<br><span class="sp-link" data-open="' + ex.row + '" role="button" tabindex="0">Open row ' + ex.row + ', ' + row.name.charAt(0).toLowerCase() + row.name.slice(1) + '</span>' : '')
+      + '</div></div>';
+  },
+
   act(act, arg) {
     if (act === 'case') { Shell.pick(arg); return; }
+    if (act === 'exopen') { Stu.exOpen = !Stu.exOpen; this.render(); return; }
+    if (act === 'example') { Stu.loadExample(+arg); return; }
     if (act === 'send') { Shell.sendOpen(); return; }
     if (act === 'retry') { Stu.boot(); return; }
     if (act === 'pick-before') byId('stu-before').click();
